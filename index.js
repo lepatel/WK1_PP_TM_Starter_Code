@@ -37,11 +37,15 @@ const taskTitles = new Set(); // To ensure unique titles
 // Shows a status message to the user
 function showStatus(message, type = "success") {
   // TODO: Show an alert
+  alert(message);
 }
 
 // Escapes HTML special characters to prevent XSS attacks
 function escapeHtml(text) {
   // TODO: Escape HTML and return
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML; 
 }
 
 // ==============================
@@ -56,32 +60,108 @@ function addTask(
   renderCallback,
   updateCountCallback,
 ) {
-  // TODO: Add task with validation
+  e.preventDefault(); // Prevent form submission
+  const title = taskInput.value.trim();
+  if (!title) {
+    addTaskError.textContent = "Task title cannot be empty.";
+    return;
+  }
+  if (taskTitles.has(title)) {
+    addTaskError.textContent = "Task title must be unique.";
+    return;
+  }
+  addTaskError.textContent = "";
+
+  const task = {
+    id: taskId++,
+    title,
+    status: "pending",
+  };
+  tasks.push(task);
+  taskMap.set(task.id, task);
+  taskTitles.add(title);
+
+  renderCallback();
+  updateCountCallback();
+  taskInput.value = "";
 }
 
 // Marks a task as completed
 function completeTask(id, renderCallback) {
-  // TODO: Mark task as completed
+  const task = taskMap.get(id);
+  if (task) {
+    task.status = "completed";
+    renderCallback();
+  } 
+  else {
+    showStatus("Task not found.", "error");
+  } 
 }
 
 // Deletes a task from the task list
 function deleteTask(id, renderCallback, updateCountCallback) {
-  // TODO: Delete task from all data structures
+  const task = taskMap.get(id);
+
+  if (task) {
+    tasks = tasks.filter((t) => t.id !== id);
+    taskMap.delete(id);
+    taskTitles.delete(task.title);
+    renderCallback();
+    updateCountCallback();
+  } 
+  else {
+    showStatus("Task not found.", "error");
+  }
 }
 
 // Saves all tasks to browser's localStorage
 function saveTasksToStorage() {
-  // TODO: Save tasks to localStorage
+  localStorage.setItem("tasks", JSON.stringify(tasks));
+  showStatus("Tasks saved successfully.");
 }
 
 // Loads tasks from browser's localStorage
 function loadTasksFromStorage(renderCallback, updateCountCallback) {
-  // TODO: Load tasks from localStorage
+  const storedTasks = localStorage.getItem("tasks");
+  if (storedTasks) {
+    tasks = JSON.parse(storedTasks);
+    taskMap.clear();
+    taskTitles.clear();
+    tasks.forEach((task) => {
+      taskMap.set(task.id, task);
+      taskTitles.add(task.title);
+    });
+    renderCallback();
+    updateCountCallback();
+    showStatus("Tasks loaded successfully.");
+  } 
+  else {
+    showStatus("No tasks found in storage.", "error");
+  }
 }
 
 // Clears all tasks from memory AND localStorage
 function clearAll(renderCallback, updateCountCallback) {
-  // TODO: Clear all tasks and localStorage
+  // check if there are tasks to clear or storage to clear
+  const hasTasks = tasks.length > 0;
+  const hasStorage = localStorage.getItem("tasks") !== null;
+
+  if (!hasTasks && !hasStorage) {
+    showStatus("No tasks to clear.", "error");
+    return;
+  }
+  
+  if (confirm("Are you sure you want to clear all tasks? This action cannot be undone.")) {
+    return; // User cancelled the action
+  }
+  
+  tasks = [];
+  taskMap.clear();
+  taskTitles.clear();
+  localStorage.removeItem("tasks");
+  renderCallback();
+  updateCountCallback();
+  showStatus("All tasks cleared successfully.");
 }
 
 // ==============================
